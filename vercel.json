@@ -4,6 +4,7 @@
     { "src": "api/*.js", "use": "@vercel/node" }
   ],
   "routes": [
+    { "src": "/config", "dest": "/api/config.js" },
     { "src": "/config.js", "dest": "/api/config.js" },
     { "src": "/callback", "dest": "/api/index.js" },
     { "src": "/events", "dest": "/api/index.js" },
