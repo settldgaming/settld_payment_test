@@ -1,8 +1,6 @@
 module.exports = (req, res) => {
-  const apiBaseUrl = (process.env.SETTLD_API_BASE_URL || '').replace(/\/$/, '');
-  const walletRequestUrl =
-  process.env.SETTLD_WALLET_REQUEST_URL || (apiBaseUrl ? `${apiBaseUrl}/wallet/request` : '');
-  const eventsUrl = process.env.SETTLD_EVENTS_URL || '/events';
+  const walletRequestUrl = '/wallet/request';
+  const eventsUrl = '/events';
   const etherscanTxUrl =
     process.env.SETTLD_ETHERSCAN_TX_URL ||
     process.env.ETHERSCAN_TX_URL || '';

@@ -8,6 +8,7 @@
     { "src": "/config.js", "dest": "/api/config.js" },
     { "src": "/callback", "dest": "/api/index.js" },
     { "src": "/events", "dest": "/api/index.js" },
+    { "src": "/wallet/request", "dest": "/api/index.js" },
     { "src": "/(.*)", "dest": "public/$1" }
   ]
   }

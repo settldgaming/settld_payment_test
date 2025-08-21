@@ -15,14 +15,14 @@
     });
   }
 
-  function defaultCreateRequest(token, payload) {
+  function defaultCreateRequest(payload) {
     const url = config.walletRequestUrl;
     if (!url) {
       return Promise.reject(new Error('walletRequestUrl not configured'));
     }
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(async r => {
       const data = await r.json().catch(() => ({}));
@@ -99,11 +99,10 @@
       e.preventDefault();
       const formData = Object.fromEntries(new FormData(form).entries());
       const token = formData.authToken;
-      delete formData.authToken;
       form.style.display = 'none';
 
       try {
-        const resp = await createRequest(token, formData);
+        const resp = await createRequest(formData);
         if (!resp || resp.error || !resp.qrCodeUrl || !resp.paymentUri) {
           throw new Error(resp && resp.error ? resp.error : 'request_rejected');
         }
