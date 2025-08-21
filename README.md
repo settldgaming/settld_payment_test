@@ -10,6 +10,23 @@ The included `vercel.json` config serves the `public` directory as a static site
 vercel --prod
 ```
 
+## Running locally
+
+Start the development server. The `prestart` script installs dependencies and
+builds static assets automatically:
+
+```bash
+npm start
+```
+
+To build the assets without starting the server, run:
+
+```bash
+npm run build
+```
+
+This serves the `public` directory and exposes the API routes (`/config`, `/callback`, `/events`). By default the server listens on `http://localhost:3000`, but you can set a different `PORT` in your `.env` file when running on your own server. The port setting is ignored on Vercel deployments.
+
 ## Configuration
 
 The page loads `/config.js` to determine API settings. On Vercel this file is

@@ -5,17 +5,20 @@ const { authenticate } = require('./auth');
 const router = express.Router();
 
 router.get('/events', authenticate, (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
 
   const { userId } = req.query;
 
-  const onCallback = (data) => {
-    if (!userId || data.userId === userId) {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const onCallback = (payload) => {
+    const { body, signature } = payload || {};
+    if (!body || (userId && body.userId !== userId)) {
+      return;
     }
+    if (signature) {
+      res.setHeader('X-Signature', signature);
+    }
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(body));
+    callbackEmitter.off('callback', onCallback);
   };
 
   callbackEmitter.on('callback', onCallback);

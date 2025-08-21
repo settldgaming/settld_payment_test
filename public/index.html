@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Settld Payment Tracking</title>
-  <script src="/config.js" defer></script>
+  <script src="config.js" defer></script>
   <script src="settld.js" defer></script>
   <style>
     body {
@@ -79,6 +79,31 @@
         border-color: #ccc;
       }
 
+      #signatureSection input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #444;
+        border-radius: 4px;
+        background-color: #1e1e1e;
+        color: inherit;
+      }
+
+      body.light #signatureSection input {
+        background-color: #ffffff;
+        border-color: #ccc;
+      }
+
+      #signatureSection .input-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      #signatureSection .input-row input {
+        flex: 1;
+        width: auto;
+      }
+      
       button {
         cursor: pointer;
         padding: 0.6rem 1.2rem;
@@ -92,6 +117,12 @@
 
       button:hover {
         background-color: #0b5ed7;
+      }
+
+      #callbackJson {
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
       }
 
       #footer {
@@ -111,7 +142,7 @@
 <body>
   <h1>Settld Payment Tracking</h1>
   <div id="content">
-    <form id="depositForm">
+    <form id="walletForm">
       <table>
         <tr>
           <td><label for="userId">User ID</label></td>
@@ -122,8 +153,8 @@
           <td><input type="password" name="authToken" id="authToken" required autocomplete="off"></td>
         </tr>
         <tr>
-          <td><label for="currency">Currency</label></td>
-          <td><select name="currency" id="currency"><option value="ETH">ETH</option></select></td>
+          <td><label for="token">Token</label></td>
+          <td><select name="token" id="token"><option value="ETH">ETH</option></select></td>
         </tr>
         <tr>
           <td><label for="chain">Chain</label></td>
@@ -136,7 +167,7 @@
           </select></td>
         </tr>
         <tr>
-          <td colspan="2" style="text-align:center;"><button type="submit">Create Deposit</button></td>
+          <td colspan="2" style="text-align:center;"><button type="submit">Create Wallet</button></td>
         </tr>
       </table>
     </form>
@@ -147,9 +178,29 @@
         <button id="copyBtn" title="Copy">&#x2398;</button>
       </div>
       <div id="status"></div>
-      <div id="countdown"></div>
       <div id="successDetails" style="display:none;">
-        <div id="callbackDetails"></div>
+        <div id="callbackJson"></div>
+        <div id="txHashLink"></div>
+        <div id="signatureSection">
+          <div>
+            <label for="latestSignature">Latest X-Signature</label>
+            <input type="text" id="latestSignature" readonly>
+          </div>
+          <div>
+            <label for="signingKey">Signing Key</label>
+            <div class="input-row">
+              <input type="text" id="signingKey">
+              <button id="verifySignature" type="button">Verify</button>
+            </div>
+          </div>
+          <div>
+            <label for="computedSignature">Computed Signature</label>
+            <div class="input-row">
+              <input type="text" id="computedSignature" readonly>
+              <span id="signatureResult"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="footer">

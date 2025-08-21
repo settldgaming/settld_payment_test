@@ -1,8 +1,26 @@
 (function () {
-  const config = window.SETTLD_CONFIG || {};
+  const config = (window.SETTLD_CONFIG = window.SETTLD_CONFIG || {});
+
+  function loadCryptoJS() {
+    return new Promise((resolve, reject) => {
+      if (window.CryptoJS) {
+        resolve(window.CryptoJS);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js';
+      script.onload = () => resolve(window.CryptoJS);
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
 
   function defaultCreateRequest(token, payload) {
-    return fetch(`${config.apiBaseUrl}/deposit/request`, {
+    const url = config.walletRequestUrl;
+    if (!url) {
+      return Promise.reject(new Error('walletRequestUrl not configured'));
+    }
+    return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(payload)
@@ -15,47 +33,64 @@
       return data;
     });
   }
-  function connectEvents(token, userId, onMessage) {
-    const url = `${config.apiBaseUrl}/events?userId=${encodeURIComponent(userId)}`;
+  function connectEvents(token, userId, onMessage, onSignature) {
+    if (!config.eventsUrl) {
+      throw new Error('eventsUrl not configured');
+    }
     const controller = new AbortController();
-    fetch(url, { headers: { 'Authorization': `Bearer ${token}` }, signal: controller.signal }).then(async resp => {
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              onMessage(JSON.parse(line.slice(6)));
-            } catch (e) {}
+    const url = `${config.eventsUrl}?userId=${encodeURIComponent(userId)}`;
+    
+    const poll = () => {
+      fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal
+      })
+        .then(async resp => {
+          if (!resp.ok) {
+            // Retry on gateway timeout or other non-200 responses
+            if (!controller.signal.aborted) {
+              setTimeout(poll, 1000);
+            }
+            return;
           }
-        }
-      }
-    });
+          const sig = resp.headers.get('X-Signature') || '';
+          if (onSignature) onSignature(sig);
+          const raw = await resp.text();
+          if (onMessage) onMessage(raw);
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setTimeout(poll, 1000);
+          }
+        });
+    };
+
+    poll();
     return () => controller.abort();
   }
 
   window.initSettldPaymentTracking = function (createRequest) {
     createRequest = createRequest || defaultCreateRequest;
-    const form = document.getElementById('depositForm');
+    const form = document.getElementById('walletForm');
     const tracking = document.getElementById('tracking');
     const qrImg = document.getElementById('qrCode');
     const paymentUrlSpan = document.getElementById('paymentUrl');
     const paymentLinkDiv = document.getElementById('paymentLink');
     const copyBtn = document.getElementById('copyBtn');
     const statusDiv = document.getElementById('status');
-    const countdownDiv = document.getElementById('countdown');
     const successDetails = document.getElementById('successDetails');
-    const callbackDetails = document.getElementById('callbackDetails');
+    const callbackJson = document.getElementById('callbackJson');
+    const txHashLink = document.getElementById('txHashLink');
     const restartBtn = document.getElementById('restart');
-    
-    let countdownInterval;
+    const signatureInput = document.getElementById('latestSignature');
+    const signingKeyInput = document.getElementById('signingKey');
+    const computedSigInput = document.getElementById('computedSignature');
+    const verifyBtn = document.getElementById('verifySignature');
+    const signatureResult = document.getElementById('signatureResult');
 
+    let latestSignature = '';
+    let latestRaw = '';
+    
     restartBtn.addEventListener('click', () => {
       window.location.reload();
     });
@@ -77,51 +112,31 @@
         tracking.style.display = 'block';
         qrImg.style.display = '';
         paymentLinkDiv.style.display = '';
-        statusDiv.textContent = 'Awaiting deposit...'; 
+        statusDiv.textContent = 'Awaiting deposit...';      
         copyBtn.onclick = () => navigator.clipboard.writeText(resp.paymentUri);
-        const stop = connectEvents(token, formData.userId, (data) => {
-          if (data.userId === formData.userId) {
+        const stop = connectEvents(
+          token,
+          formData.userId,
+          raw => {
+            latestRaw = raw;
             stop();
-            clearInterval(countdownInterval);
-            countdownDiv.textContent = '';
-            statusDiv.textContent = `Payment of ${data.amount} ${data.currency} received.`;
+            statusDiv.textContent = 'Payment received.';
             qrImg.style.display = 'none';
             paymentLinkDiv.style.display = 'none';
 
-            let details = '';
-            if (data.from) details += `<div>From: ${data.from}</div>`;
-            if (data.to) details += `<div>To: ${data.to}</div>`;
-            if (data.chain) details += `<div>Chain: ${data.chain}</div>`;
-            if (data.chainId !== undefined) details += `<div>Chain ID: ${data.chainId}</div>`;
-            if (data.confirmedAt) details += `<div>Confirmed At: ${data.confirmedAt}</div>`;
-            if (data.txHash) {
-              if (config.etherscanTxUrl) {
-                const url = `${config.etherscanTxUrl}${data.txHash}`;
-                details += `<div>Tx Hash: <a href="${url}" target="_blank">${data.txHash}</a></div>`;
-              } else {
-                details += `<div>Tx Hash: ${data.txHash}</div>`;
-              }
+            if (callbackJson) {
+              callbackJson.textContent = raw;
             }
-
-            callbackDetails.innerHTML = details;
+            if (txHashLink) {
+              txHashLink.textContent = '';
+            }
             successDetails.style.display = 'block';
+          },
+          sig => {
+            latestSignature = sig;
+            if (signatureInput) signatureInput.value = sig;
           }
-        });
-        
-        let remaining = 300;
-        countdownDiv.textContent = `Time remaining: ${remaining}s`;
-        countdownInterval = setInterval(() => {
-          remaining--;
-          countdownDiv.textContent = `Time remaining: ${remaining}s`;
-          if (remaining <= 0) {
-            clearInterval(countdownInterval);
-            stop();
-            statusDiv.textContent = 'Deposit window expired.';
-            qrImg.style.display = 'none';
-            paymentLinkDiv.style.display = 'none';
-            countdownDiv.textContent = '';
-          }
-        }, 1000);
+        );
       } catch (err) {
         tracking.style.display = 'block';
         qrImg.style.display = 'none';
@@ -129,9 +144,43 @@
         statusDiv.textContent = (err && err.message) ? err.message : 'Request rejected.';
       }
     });
+    
+    if (verifyBtn) {
+      verifyBtn.addEventListener('click', async () => {
+        if (!signingKeyInput || !signatureResult) return;
+        const key = signingKeyInput.value || '';
+        if (!key || !latestRaw || !latestSignature) {
+          signatureResult.textContent = 'Missing data';
+          signatureResult.style.color = 'orange';
+          return;
+        }
+        try {
+          const CryptoJS = await loadCryptoJS();
+          const computed = CryptoJS.HmacSHA256(latestRaw, key).toString(CryptoJS.enc.Hex);
+          if (computedSigInput) computedSigInput.value = computed;
+          if (computed === latestSignature) {
+            signatureResult.textContent = 'Signature verified';
+            signatureResult.style.color = 'lime';
+          } else {
+            signatureResult.textContent = 'Signature mismatch';
+            signatureResult.style.color = 'red';
+          }
+        } catch (err) {
+          signatureResult.textContent = 'Verification failed';
+          signatureResult.style.color = 'red';
+        }
+      });
+    }
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const resp = await fetch('/config');
+      const data = await resp.json().catch(() => ({}));
+      Object.assign(config, data);
+      window.SETTLD_CONFIG = config;
+    } catch (_err) {}
+
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
       themeToggle.addEventListener('click', () => {

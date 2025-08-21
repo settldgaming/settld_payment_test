@@ -13,7 +13,8 @@ router.post('/callback', (req, res) => {
       console.error('Callback payload error: empty payload');
       return res.status(400).json({ error: 'empty_payload' });
     }
-    callbackEmitter.emit('callback', req.body);
+    const signature = req.headers['x-signature'] || '';
+    callbackEmitter.emit('callback', { body: req.body, signature });
     return res.json(req.body);
   } catch (err) {
     console.error('Callback processing error:', err);
