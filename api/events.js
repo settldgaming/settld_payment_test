@@ -1,10 +1,9 @@
 const express = require('express');
 const { callbackEmitter } = require('./callback');
-const { authenticate } = require('./auth');
 
 const router = express.Router();
 
-router.get('/events', authenticate, (req, res) => {
+router.get('/events', (req, res) => {
 
   const { userId } = req.query;
 

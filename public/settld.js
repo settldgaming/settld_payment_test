@@ -20,9 +20,10 @@
     if (!url) {
       return Promise.reject(new Error('walletRequestUrl not configured'));
     }
+    const headers = { 'Content-Type': 'application/json' };
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload)
     }).then(async r => {
       const data = await r.json().catch(() => ({}));
@@ -33,16 +34,15 @@
       return data;
     });
   }
-  function connectEvents(token, userId, onMessage, onSignature) {
+  function connectEvents(userId, onMessage, onSignature) {
     if (!config.eventsUrl) {
       throw new Error('eventsUrl not configured');
     }
     const controller = new AbortController();
     const url = `${config.eventsUrl}?userId=${encodeURIComponent(userId)}`;
-    
+
     const poll = () => {
       fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal
       })
         .then(async resp => {
@@ -98,7 +98,6 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = Object.fromEntries(new FormData(form).entries());
-      const token = formData.authToken;
       form.style.display = 'none';
 
       try {
@@ -114,7 +113,6 @@
         statusDiv.textContent = 'Awaiting deposit...';      
         copyBtn.onclick = () => navigator.clipboard.writeText(resp.paymentUri);
         const stop = connectEvents(
-          token,
           formData.userId,
           raw => {
             latestRaw = raw;

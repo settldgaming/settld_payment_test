@@ -13,17 +13,18 @@ router.post('/wallet/request', async (req, res) => {
   }
 
   try {
-    const { authToken, ...payload } = req.body || {};
-    if (!authToken) {
-      return res.status(401).json({ error: 'unauthorized' });
+    const token = process.env.SETTLD_API_AUTH_TOKEN || '';
+    if (!token) {
+      return res.status(500).json({ error: 'auth_token_not_configured' });
     }
+    const bodyPayload = req.body || {};
     const response = await fetch(externalUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(bodyPayload)
     });
 
     const data = await response.json().catch(() => ({}));
