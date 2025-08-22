@@ -18,7 +18,7 @@ router.post('/wallet/request', async (req, res) => {
       return res.status(500).json({ error: 'auth_token_not_configured' });
     }
     const { userId, key } = req.body || {};
-    if (!userId || key !== 'ETH_MAIN') {
+    if (!userId || !key) {
       return res.status(400).json({ error: 'invalid_request' });
     }
     const bodyPayload = { userId, key };
