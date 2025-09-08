@@ -1,8 +1,8 @@
 const express = require('express');
+const router = express.Router();
 const { EventEmitter } = require('events');
 
 const callbackEmitter = new EventEmitter();
-const router = express.Router();
 
 router.use(express.json());
 

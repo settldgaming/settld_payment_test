@@ -17,11 +17,16 @@ router.post('/wallet/request', async (req, res) => {
     if (!token) {
       return res.status(500).json({ error: 'auth_token_not_configured' });
     }
-    const { userId, key } = req.body || {};
+    const { userId, key, value, getchainid } = req.body || {};
     if (!userId || !key) {
       return res.status(400).json({ error: 'invalid_request' });
     }
     const bodyPayload = { userId, key };
+    if (value !== undefined) {
+      const numericValue = Number(value);
+      if (!Number.isNaN(numericValue)) bodyPayload.value = numericValue;
+    }
+    if (getchainid !== undefined) bodyPayload.getchainid = getchainid;
     const response = await fetch(externalUrl, {
       method: 'POST',
       headers: {

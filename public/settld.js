@@ -98,6 +98,19 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = Object.fromEntries(new FormData(form).entries());
+      if (formData.getchainid === 'omit') {
+        delete formData.getchainid;
+      } else if (formData.getchainid === 'true') {
+        formData.getchainid = true;
+      } else if (formData.getchainid === 'false') {
+        formData.getchainid = false;
+      }
+      if (formData.value === '') {
+        delete formData.value;
+      } else {
+        const numericValue = Number(formData.value);
+        if (!Number.isNaN(numericValue)) formData.value = numericValue;
+      }
       form.style.display = 'none';
 
       try {
