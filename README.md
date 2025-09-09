@@ -29,14 +29,11 @@ This serves the `public` directory and exposes the API routes (`/config`, `/call
 
 ## Configuration
 
-The page loads `/config.js` to determine API settings. The browser sends
-`POST /wallet/request` to the app server without needing to supply an
-authorization token. The server includes its configured bearer token in the
-`Authorization` header when forwarding the request to the Settld API. On Vercel
-the serverless function exposes the following environment variables:
+The page loads `/config.js` to determine API settings. The browser sends `POST /wallet/request` to the app server without needing to supply an authorization token. The server includes its configured bearer token in the `Authorization` header and signs the request with `X-Auth-Date` and `X-Auth-Mac` headers when forwarding the request to the Settld API. On Vercel the serverless function exposes the following environment variables:
 
 - `SETTLD_API_BASE_URL` – base URL of the Settld API
 - `SETTLD_API_AUTH_TOKEN` – bearer token used when requesting wallets
+- `SETTLD_HEADER_MAC_SECRET` – secret for signing `X-Auth-*` headers
 - `SETTLD_ETHERSCAN_TX_URL` (optional) – base URL for viewing transactions
   on a block explorer
 

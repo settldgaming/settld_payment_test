@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 
 router.use(express.json());
@@ -17,6 +18,11 @@ router.post('/wallet/request', async (req, res) => {
     if (!token) {
       return res.status(500).json({ error: 'auth_token_not_configured' });
     }
+
+    const macSecret = process.env.SETTLD_HEADER_MAC_SECRET || '';
+    if (!macSecret) {
+      return res.status(500).json({ error: 'mac_secret_not_configured' });
+    }
     const { userId, key, value, getchainid } = req.body || {};
     if (!userId || !key) {
       return res.status(400).json({ error: 'invalid_request' });
@@ -27,11 +33,19 @@ router.post('/wallet/request', async (req, res) => {
       if (!Number.isNaN(numericValue)) bodyPayload.value = numericValue;
     }
     if (getchainid !== undefined) bodyPayload.getchainid = getchainid;
+    const authDate = new Date().toISOString();
+    const authMac = crypto
+      .createHmac('sha256', macSecret)
+      .update(authDate)
+      .digest('base64');
+
     const response = await fetch(externalUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-Auth-Date': authDate,
+        'X-Auth-Mac': authMac
       },
       body: JSON.stringify(bodyPayload)
     });
