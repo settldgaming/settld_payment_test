@@ -10,5 +10,8 @@
     { "src": "/events", "dest": "/api/index.js" },
     { "src": "/wallet/request", "dest": "/api/index.js" },
     { "src": "/(.*)", "dest": "public/$1" }
-  ]
+  ],
+  "env": {
+    "SETTLD_HEADER_MAC_SECRET": "@SETTLD_HEADER_MAC_SECRET"
+  }
 }
